@@ -29,7 +29,16 @@ export default function FileBrowser({
   const currentFolder = searchParams.get("folder") ?? "";
 
   const [files, setFiles] = useState<FileRecord[]>(initialFiles);
-  const [folders, setFolders] = useState<string[]>(initialFolders);
+  const [folders, setFolders] = useState<string[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(`bevisdrive-folders-${userId}`);
+      if (saved) {
+        const savedFolders = JSON.parse(saved) as string[];
+        return Array.from(new Set([...initialFolders, ...savedFolders]));
+      }
+    }
+    return initialFolders;
+  });
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -67,7 +76,13 @@ export default function FileBrowser({
     }
 
     const allFolders = (data ?? []).map((f) => f.folder).filter(Boolean);
-    setFolders(Array.from(new Set([...initialFolders, ...allFolders])));
+    setFolders((prev) => {
+      const merged = Array.from(new Set([...prev, ...initialFolders, ...allFolders]));
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`bevisdrive-folders-${userId}`, JSON.stringify(merged));
+      }
+      return merged;
+    });
   }, [userId, view, currentFolder, initialFolders]);
 
   function findDuplicates(fileList: FileRecord[]): FileRecord[] {
@@ -148,7 +163,13 @@ export default function FileBrowser({
         folders={folders} 
         currentFolder={currentFolder} 
         onFolderCreated={(folderName) => {
-          setFolders((prev) => Array.from(new Set([...prev, folderName])));
+          setFolders((prev) => {
+            const updated = Array.from(new Set([...prev, folderName]));
+            if (typeof window !== "undefined") {
+              localStorage.setItem(`bevisdrive-folders-${userId}`, JSON.stringify(updated));
+            }
+            return updated;
+          });
         }}
       />
 
