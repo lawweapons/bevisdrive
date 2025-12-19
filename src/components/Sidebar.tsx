@@ -7,15 +7,17 @@ interface SidebarProps {
   folders: string[];
   currentFolder: string;
   onFolderCreated?: (folderName: string) => void;
+  onFileDrop?: (fileId: string, targetFolder: string) => void;
 }
 
-export default function Sidebar({ folders, currentFolder, onFolderCreated }: SidebarProps) {
+export default function Sidebar({ folders, currentFolder, onFolderCreated, onFileDrop }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const [isCreating, setIsCreating] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
 
   const view = searchParams.get("view") ?? "all";
 
@@ -125,8 +127,23 @@ export default function Sidebar({ folders, currentFolder, onFolderCreated }: Sid
             <button
               key={folder}
               onClick={() => navigateTo("folder", folder)}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOverFolder(folder);
+              }}
+              onDragLeave={() => setDragOverFolder(null)}
+              onDrop={(e) => {
+                e.preventDefault();
+                const fileId = e.dataTransfer.getData("fileId");
+                if (fileId && onFileDrop) {
+                  onFileDrop(fileId, folder);
+                }
+                setDragOverFolder(null);
+              }}
               className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors ${
-                currentFolder === folder
+                dragOverFolder === folder
+                  ? "bg-blue-600 text-white"
+                  : currentFolder === folder
                   ? "bg-slate-700 text-white font-medium"
                   : "text-slate-400 hover:bg-slate-700/50 hover:text-slate-200"
               }`}

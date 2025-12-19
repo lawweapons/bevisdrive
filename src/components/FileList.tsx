@@ -155,7 +155,12 @@ export default function FileList({ files, folders, onRefresh }: FileListProps) {
           {files.map((file) => (
             <tr
               key={file.id}
-              className="border-b border-slate-700 hover:bg-slate-700/50"
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData("fileId", file.id);
+                e.dataTransfer.effectAllowed = "move";
+              }}
+              className="border-b border-slate-700 hover:bg-slate-700/50 cursor-grab active:cursor-grabbing"
             >
               <td className="py-3">
                 {editingId === file.id ? (
@@ -256,7 +261,7 @@ export default function FileList({ files, folders, onRefresh }: FileListProps) {
                     ⋮
                   </button>
                   {activeMenu === file.id && (
-                    <div className="absolute right-0 top-full z-10 mt-1 w-36 rounded-md border border-slate-600 bg-slate-800 py-1 shadow-lg">
+                    <div className="absolute right-0 bottom-full z-10 mb-1 w-36 rounded-md border border-slate-600 bg-slate-800 py-1 shadow-lg">
                       <button
                         onClick={() => handleDownload(file)}
                         className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700"

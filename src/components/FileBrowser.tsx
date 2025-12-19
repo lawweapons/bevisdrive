@@ -171,6 +171,38 @@ export default function FileBrowser({
             return updated;
           });
         }}
+        onFileDrop={async (fileId, targetFolder) => {
+          const file = files.find((f) => f.id === fileId);
+          if (!file || file.folder === targetFolder) return;
+
+          const supabase = createSupabaseBrowserClient();
+          const oldPath = file.path;
+          const fileName = oldPath.split("/").pop()!;
+          const newPath = targetFolder
+            ? `${userId}/${targetFolder}/${fileName}`
+            : `${userId}/${fileName}`;
+
+          const { error: moveError } = await supabase.storage
+            .from(file.bucket)
+            .move(oldPath, newPath);
+
+          if (moveError) {
+            alert(`Failed to move file: ${moveError.message}`);
+            return;
+          }
+
+          const { error: dbError } = await supabase
+            .from("files")
+            .update({ path: newPath, folder: targetFolder })
+            .eq("id", fileId);
+
+          if (dbError) {
+            alert(`Failed to update record: ${dbError.message}`);
+            return;
+          }
+
+          fetchFiles();
+        }}
       />
 
       <main className="flex-1 overflow-auto p-6">
