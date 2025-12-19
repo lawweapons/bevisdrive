@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
 import FileBrowser from "@/components/FileBrowser";
@@ -26,11 +27,13 @@ export default async function FilesPage() {
   return (
     <div className="min-h-screen bg-slate-900">
       <AppHeader email={user.email} />
-      <FileBrowser
-        userId={user.id}
-        initialFiles={files ?? []}
-        initialFolders={folders}
-      />
+      <Suspense fallback={<div className="p-6 text-slate-400">Loading...</div>}>
+        <FileBrowser
+          userId={user.id}
+          initialFiles={files ?? []}
+          initialFolders={folders}
+        />
+      </Suspense>
     </div>
   );
 }
