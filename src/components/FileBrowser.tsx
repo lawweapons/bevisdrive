@@ -59,11 +59,34 @@ export default function FileBrowser({
       return;
     }
 
-    setFiles(data ?? []);
+    if (view === "duplicates") {
+      const duplicates = findDuplicates(data ?? []);
+      setFiles(duplicates);
+    } else {
+      setFiles(data ?? []);
+    }
 
     const allFolders = (data ?? []).map((f) => f.folder).filter(Boolean);
     setFolders(Array.from(new Set([...initialFolders, ...allFolders])));
   }, [userId, view, currentFolder, initialFolders]);
+
+  function findDuplicates(fileList: FileRecord[]): FileRecord[] {
+    const seen = new Map<string, FileRecord[]>();
+    fileList.forEach((file) => {
+      const key = `${file.original_name}-${file.size}`;
+      if (!seen.has(key)) {
+        seen.set(key, []);
+      }
+      seen.get(key)!.push(file);
+    });
+    const duplicates: FileRecord[] = [];
+    seen.forEach((files) => {
+      if (files.length > 1) {
+        duplicates.push(...files);
+      }
+    });
+    return duplicates;
+  }
 
   useEffect(() => {
     if (!isSearching) {
@@ -121,7 +144,13 @@ export default function FileBrowser({
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)]">
-      <Sidebar folders={folders} currentFolder={currentFolder} />
+      <Sidebar 
+        folders={folders} 
+        currentFolder={currentFolder} 
+        onFolderCreated={(folderName) => {
+          setFolders((prev) => Array.from(new Set([...prev, folderName])));
+        }}
+      />
 
       <main className="flex-1 overflow-auto p-6">
         <div className="max-w-5xl mx-auto space-y-6">
@@ -131,6 +160,7 @@ export default function FileBrowser({
                 {view === "all" && "All files"}
                 {view === "recent" && "Recent files"}
                 {view === "shared" && "Shared files"}
+                {view === "duplicates" && "Duplicate files"}
                 {view === "folder" && (currentFolder || "Root")}
               </h1>
               {currentFolder && view === "folder" && (

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { formatFileSize, formatDate, getMimeIcon } from "@/lib/utils";
+import { formatFileSize, formatDateTime, getMimeIcon } from "@/lib/utils";
 import type { FileRecord } from "@/lib/types";
 
 interface FileListProps {
@@ -145,7 +145,7 @@ export default function FileList({ files, onRefresh }: FileListProps) {
             <th className="pb-3 font-medium">Name</th>
             <th className="pb-3 font-medium">Size</th>
             <th className="pb-3 font-medium">Type</th>
-            <th className="pb-3 font-medium">Modified</th>
+            <th className="pb-3 font-medium">Uploaded</th>
             <th className="pb-3 font-medium">Tags</th>
             <th className="pb-3 font-medium w-20">Actions</th>
           </tr>
@@ -225,7 +225,7 @@ export default function FileList({ files, onRefresh }: FileListProps) {
                 {file.mime_type.split("/")[1] || file.mime_type}
               </td>
               <td className="py-3 text-slate-400">
-                {formatDate(file.created_at)}
+                {formatDateTime(file.created_at)}
               </td>
               <td className="py-3">
                 {file.tags.length > 0 ? (
