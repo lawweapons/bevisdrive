@@ -8,10 +8,11 @@ import type { FileRecord } from "@/lib/types";
 
 interface FileListProps {
   files: FileRecord[];
+  folders: string[];
   onRefresh: () => void;
 }
 
-export default function FileList({ files, onRefresh }: FileListProps) {
+export default function FileList({ files, folders, onRefresh }: FileListProps) {
   const router = useRouter();
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -186,18 +187,19 @@ export default function FileList({ files, onRefresh }: FileListProps) {
                 ) : movingId === file.id ? (
                   <div className="flex items-center gap-2">
                     <span className="text-slate-400">Move to:</span>
-                    <input
-                      type="text"
+                    <select
                       value={moveFolder}
                       onChange={(e) => setMoveFolder(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleMove(file);
-                        if (e.key === "Escape") setMovingId(null);
-                      }}
-                      placeholder="folder/path"
                       className="flex-1 rounded border border-slate-600 bg-slate-700 px-2 py-1 text-sm text-white"
                       autoFocus
-                    />
+                    >
+                      <option value="">Root (no folder)</option>
+                      {folders.filter(f => f !== file.folder).map((folder) => (
+                        <option key={folder} value={folder}>
+                          {folder}
+                        </option>
+                      ))}
+                    </select>
                     <button
                       onClick={() => handleMove(file)}
                       className="text-green-600 hover:text-green-700"
