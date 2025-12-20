@@ -29,6 +29,7 @@ export default function FileList({ files, folders, onRefresh, viewMode = "list",
   const [previewFile, setPreviewFile] = useState<FileRecord | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [dragOverFileId, setDragOverFileId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -458,6 +459,15 @@ export default function FileList({ files, folders, onRefresh, viewMode = "list",
                     e.dataTransfer.setData("fileId", file.id);
                     e.dataTransfer.effectAllowed = "move";
                   }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOverFileId(file.id);
+                  }}
+                  onDragLeave={() => setDragOverFileId(null)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOverFileId(null);
+                  }}
                   onContextMenu={(e) => {
                     e.preventDefault();
                     setMenuPosition({ top: e.clientY, left: e.clientX });
@@ -471,7 +481,7 @@ export default function FileList({ files, folders, onRefresh, viewMode = "list",
                   onDoubleClick={() => canPreview(file.mime_type) && openPreview(file)}
                   className={`border-b border-slate-700 hover:bg-slate-700/50 cursor-pointer ${
                     selectedFiles.has(file.id) ? "bg-blue-900/30" : ""
-                  }`}
+                  } ${dragOverFileId === file.id ? "border-t-2 border-t-blue-500" : ""}`}
                 >
                   <td className="py-3">
                     <input
