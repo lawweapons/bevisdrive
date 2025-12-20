@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import StorageQuota from "./StorageQuota";
+import FolderSettingsModal from "./FolderSettingsModal";
 import type { FolderRecord } from "@/lib/types";
 
 interface FolderTreeNode {
@@ -29,6 +30,14 @@ export default function Sidebar({ folders, currentFolder, userId, onFolderCreate
   const [isCreating, setIsCreating] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
+  const [editingFolder, setEditingFolder] = useState<string | null>(null);
+  const [folderSettings, setFolderSettings] = useState<Record<string, { icon: string; color: string }>>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("bevisdrive-folder-settings");
+      return saved ? JSON.parse(saved) : {};
+    }
+    return {};
+  });
 
   const view = searchParams.get("view") ?? "all";
 
@@ -105,16 +114,30 @@ export default function Sidebar({ folders, currentFolder, userId, onFolderCreate
     });
   }
 
+  function saveFolderSettings(path: string, icon: string, color: string) {
+    const updated = { ...folderSettings, [path]: { icon, color } };
+    setFolderSettings(updated);
+    localStorage.setItem("bevisdrive-folder-settings", JSON.stringify(updated));
+    setEditingFolder(null);
+  }
+
   function renderFolderNode(node: FolderTreeNode, depth: number = 0) {
     const hasChildren = node.children.length > 0;
     const isExpanded = expandedFolders.has(node.path);
     const isSelected = currentFolder === node.path;
     const isDragOver = dragOverFolder === node.path;
+    const settings = folderSettings[node.path];
+    const folderIcon = settings?.icon || node.icon || "📂";
+    const folderColor = settings?.color;
 
     return (
       <div key={node.path}>
         <button
           onClick={() => navigateTo("folder", node.path)}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            setEditingFolder(node.path);
+          }}
           onDragOver={(e) => {
             e.preventDefault();
             setDragOverFolder(node.path);
@@ -149,8 +172,10 @@ export default function Sidebar({ folders, currentFolder, userId, onFolderCreate
             </span>
           )}
           {!hasChildren && <span className="w-4" />}
-          <span>{node.icon || "📂"}</span>
-          <span className="truncate">{node.name}</span>
+          <span>{folderIcon}</span>
+          <span className="truncate" style={folderColor ? { color: folderColor } : undefined}>
+            {node.name}
+          </span>
         </button>
         {hasChildren && isExpanded && (
           <div>
@@ -239,6 +264,16 @@ export default function Sidebar({ folders, currentFolder, userId, onFolderCreate
         </div>
       </div>
       <StorageQuota userId={userId} />
+
+      {editingFolder && (
+        <FolderSettingsModal
+          folderName={editingFolder}
+          currentIcon={folderSettings[editingFolder]?.icon}
+          currentColor={folderSettings[editingFolder]?.color}
+          onSave={(icon, color) => saveFolderSettings(editingFolder, icon, color)}
+          onClose={() => setEditingFolder(null)}
+        />
+      )}
     </aside>
   );
 }
