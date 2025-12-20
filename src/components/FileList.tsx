@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { formatFileSize, formatDateTime, getMimeIcon } from "@/lib/utils";
@@ -15,10 +15,45 @@ interface FileListProps {
 export default function FileList({ files, folders, onRefresh }: FileListProps) {
   const router = useRouter();
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [movingId, setMovingId] = useState<string | null>(null);
   const [moveFolder, setMoveFolder] = useState("");
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setActiveMenu(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  function openMenu(fileId: string, buttonElement: HTMLButtonElement) {
+    if (activeMenu === fileId) {
+      setActiveMenu(null);
+      return;
+    }
+    const rect = buttonElement.getBoundingClientRect();
+    const menuHeight = 220;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    
+    let top: number;
+    if (spaceBelow >= menuHeight) {
+      top = rect.bottom + 4;
+    } else if (spaceAbove >= menuHeight) {
+      top = rect.top - menuHeight - 4;
+    } else {
+      top = Math.max(8, Math.min(window.innerHeight - menuHeight - 8, rect.top - menuHeight / 2));
+    }
+    
+    setMenuPosition({ top, left: rect.right - 144 });
+    setActiveMenu(fileId);
+  }
 
   async function handleDelete(file: FileRecord) {
     if (!confirm(`Delete "${file.original_name}"?`)) return;
@@ -251,67 +286,76 @@ export default function FileList({ files, folders, onRefresh }: FileListProps) {
                 )}
               </td>
               <td className="py-3">
-                <div className="relative">
-                  <button
-                    onClick={() =>
-                      setActiveMenu(activeMenu === file.id ? null : file.id)
-                    }
-                    className="rounded p-1 hover:bg-slate-700 text-slate-300"
-                  >
-                    ⋮
-                  </button>
-                  {activeMenu === file.id && (
-                    <div className="absolute right-0 bottom-full z-10 mb-1 w-36 rounded-md border border-slate-600 bg-slate-800 py-1 shadow-lg">
-                      <button
-                        onClick={() => handleDownload(file)}
-                        className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700"
-                      >
-                        Download
-                      </button>
-                      <button
-                        onClick={() => {
-                          setEditName(file.original_name);
-                          setEditingId(file.id);
-                          setActiveMenu(null);
-                        }}
-                        className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700"
-                      >
-                        Rename
-                      </button>
-                      <button
-                        onClick={() => {
-                          setMoveFolder(file.folder);
-                          setMovingId(file.id);
-                          setActiveMenu(null);
-                        }}
-                        className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700"
-                      >
-                        Move
-                      </button>
-                      <button
-                        onClick={() => {
-                          router.push(`/files?share=${file.id}`);
-                          setActiveMenu(null);
-                        }}
-                        className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700"
-                      >
-                        Share
-                      </button>
-                      <hr className="my-1 border-slate-600" />
-                      <button
-                        onClick={() => handleDelete(file)}
-                        className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/20"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <button
+                  onClick={(e) => openMenu(file.id, e.currentTarget)}
+                  className="rounded p-1 hover:bg-slate-700 text-slate-300"
+                >
+                  ⋮
+                </button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      {activeMenu && menuPosition && (
+        <div
+          ref={menuRef}
+          className="fixed z-50 w-36 rounded-md border border-slate-600 bg-slate-800 py-1 shadow-lg"
+          style={{ top: menuPosition.top, left: menuPosition.left }}
+        >
+          {(() => {
+            const file = files.find((f) => f.id === activeMenu);
+            if (!file) return null;
+            return (
+              <>
+                <button
+                  onClick={() => handleDownload(file)}
+                  className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700"
+                >
+                  Download
+                </button>
+                <button
+                  onClick={() => {
+                    setEditName(file.original_name);
+                    setEditingId(file.id);
+                    setActiveMenu(null);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700"
+                >
+                  Rename
+                </button>
+                <button
+                  onClick={() => {
+                    setMoveFolder(file.folder);
+                    setMovingId(file.id);
+                    setActiveMenu(null);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700"
+                >
+                  Move
+                </button>
+                <button
+                  onClick={() => {
+                    router.push(`/files?share=${file.id}`);
+                    setActiveMenu(null);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700"
+                >
+                  Share
+                </button>
+                <hr className="my-1 border-slate-600" />
+                <button
+                  onClick={() => handleDelete(file)}
+                  className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/20"
+                >
+                  Delete
+                </button>
+              </>
+            );
+          })()}
+        </div>
+      )}
     </div>
   );
 }
