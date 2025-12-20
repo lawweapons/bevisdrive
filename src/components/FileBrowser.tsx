@@ -10,6 +10,7 @@ import SearchBar from "./SearchBar";
 import UploadZone from "./UploadZone";
 import FileList from "./FileList";
 import ShareModal from "./ShareModal";
+import QuickSearch from "./QuickSearch";
 
 interface FileBrowserProps {
   userId: string;
@@ -175,7 +176,8 @@ export default function FileBrowser({
     <div className="flex h-[calc(100vh-3.5rem)]">
       <Sidebar 
         folders={folders} 
-        currentFolder={currentFolder} 
+        currentFolder={currentFolder}
+        userId={userId}
         onFolderCreated={async (folderName) => {
           setFolders((prev) => Array.from(new Set([...prev, folderName])).sort());
           
@@ -276,6 +278,7 @@ export default function FileBrowser({
       </main>
 
       <ShareModal />
+      <QuickSearch userId={userId} />
     </div>
   );
 }

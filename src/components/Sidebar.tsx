@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import StorageQuota from "./StorageQuota";
 
 interface SidebarProps {
   folders: string[];
   currentFolder: string;
+  userId: string;
   onFolderCreated?: (folderName: string) => void;
   onFileDrop?: (fileId: string, targetFolder: string) => void;
 }
 
-export default function Sidebar({ folders, currentFolder, onFolderCreated, onFileDrop }: SidebarProps) {
+export default function Sidebar({ folders, currentFolder, userId, onFolderCreated, onFileDrop }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -159,6 +161,7 @@ export default function Sidebar({ folders, currentFolder, onFolderCreated, onFil
           )}
         </div>
       </div>
+      <StorageQuota userId={userId} />
     </aside>
   );
 }
