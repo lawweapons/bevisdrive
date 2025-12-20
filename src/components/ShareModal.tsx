@@ -220,6 +220,16 @@ export default function ShareModal() {
                         Copy
                       </button>
                     </div>
+                    {share?.view_count !== undefined && (
+                      <p className="text-xs text-slate-500 mt-2">
+                        👁 {share.view_count} view{share.view_count !== 1 ? "s" : ""}
+                        {share.expires_at && (
+                          <span className="ml-2">
+                            • Expires {new Date(share.expires_at).toLocaleDateString()}
+                          </span>
+                        )}
+                      </p>
+                    )}
                   </div>
                 )}
               </>
