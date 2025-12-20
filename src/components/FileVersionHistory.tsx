@@ -67,8 +67,8 @@ export default function FileVersionHistory({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-2xl rounded-xl bg-slate-800 border border-slate-700 p-6 shadow-xl max-h-[80vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-2xl rounded-xl bg-slate-800 border border-slate-700 p-4 sm:p-6 shadow-xl max-h-[90vh] overflow-hidden flex flex-col">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-white">Version History</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-200">

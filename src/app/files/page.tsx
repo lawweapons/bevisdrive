@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import AppHeader from "@/components/AppHeader";
-import FileBrowser from "@/components/FileBrowser";
+import FilesPageClient from "@/components/FilesPageClient";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function FilesPage() {
@@ -26,9 +25,9 @@ export default async function FilesPage() {
 
   return (
     <div className="min-h-screen bg-slate-900">
-      <AppHeader email={user.email} />
       <Suspense fallback={<div className="p-6 text-slate-400">Loading...</div>}>
-        <FileBrowser
+        <FilesPageClient
+          email={user.email}
           userId={user.id}
           initialFiles={files ?? []}
           initialFolders={folders}

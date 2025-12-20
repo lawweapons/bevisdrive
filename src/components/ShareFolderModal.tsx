@@ -67,8 +67,8 @@ export default function ShareFolderModal({ folderName, userId, onClose }: ShareF
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-md rounded-xl bg-slate-800 border border-slate-700 p-6 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-xl bg-slate-800 border border-slate-700 p-4 sm:p-6 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-white">Share Folder</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-200">

@@ -440,13 +440,13 @@ export default function FileList({ files, folders, onRefresh, viewMode = "list",
                 <th className="pb-3 font-medium cursor-pointer hover:text-white" onClick={() => toggleSort("name")}>
                   Name {sortBy === "name" && (sortDir === "asc" ? "↑" : "↓")}
                 </th>
-                <th className="pb-3 font-medium cursor-pointer hover:text-white" onClick={() => toggleSort("size")}>
+                <th className="pb-3 font-medium cursor-pointer hover:text-white hidden sm:table-cell" onClick={() => toggleSort("size")}>
                   Size {sortBy === "size" && (sortDir === "asc" ? "↑" : "↓")}
                 </th>
-                <th className="pb-3 font-medium cursor-pointer hover:text-white" onClick={() => toggleSort("type")}>
+                <th className="pb-3 font-medium cursor-pointer hover:text-white hidden md:table-cell" onClick={() => toggleSort("type")}>
                   Type {sortBy === "type" && (sortDir === "asc" ? "↑" : "↓")}
                 </th>
-                <th className="pb-3 font-medium cursor-pointer hover:text-white" onClick={() => toggleSort("date")}>
+                <th className="pb-3 font-medium cursor-pointer hover:text-white hidden lg:table-cell" onClick={() => toggleSort("date")}>
                   Uploaded {sortBy === "date" && (sortDir === "asc" ? "↑" : "↓")}
                 </th>
                 <th className="pb-3 font-medium w-20">Actions</th>
@@ -481,7 +481,7 @@ export default function FileList({ files, folders, onRefresh, viewMode = "list",
                     }
                   }}
                   onDoubleClick={() => canPreview(file.mime_type) && openPreview(file)}
-                  className={`border-b border-slate-700 hover:bg-slate-700/50 cursor-pointer ${
+                  className={`border-b border-slate-700 hover:bg-slate-700/50 cursor-pointer touch-manipulation ${
                     selectedFiles.has(file.id) ? "bg-blue-900/30" : ""
                   } ${dragOverFileId === file.id ? "border-t-2 border-t-blue-500" : ""}`}
                 >
@@ -537,13 +537,13 @@ export default function FileList({ files, folders, onRefresh, viewMode = "list",
                       </div>
                     )}
                   </td>
-                  <td className="py-3 text-slate-400">{formatFileSize(file.size)}</td>
-                  <td className="py-3 text-slate-400">{file.mime_type.split("/")[1] || file.mime_type}</td>
-                  <td className="py-3 text-slate-400">{formatDateTime(file.created_at)}</td>
-                  <td className="py-3">
+                  <td className="py-3 sm:py-4 text-slate-400 hidden sm:table-cell">{formatFileSize(file.size)}</td>
+                  <td className="py-3 sm:py-4 text-slate-400 hidden md:table-cell">{file.mime_type.split("/")[1] || file.mime_type}</td>
+                  <td className="py-3 sm:py-4 text-slate-400 hidden lg:table-cell">{formatDateTime(file.created_at)}</td>
+                  <td className="py-3 sm:py-4">
                     <button
                       onClick={(e) => { e.stopPropagation(); openMenu(file.id, e.currentTarget); }}
-                      className="rounded p-1 hover:bg-slate-700 text-slate-300"
+                      className="rounded p-2 hover:bg-slate-700 text-slate-300 touch-manipulation"
                     >
                       ⋮
                     </button>

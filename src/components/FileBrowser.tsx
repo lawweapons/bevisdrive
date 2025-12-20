@@ -16,12 +16,16 @@ interface FileBrowserProps {
   userId: string;
   initialFiles: FileRecord[];
   initialFolders: string[];
+  isMobileMenuOpen?: boolean;
+  setIsMobileMenuOpen?: (open: boolean) => void;
 }
 
 export default function FileBrowser({
   userId,
   initialFiles,
   initialFolders,
+  isMobileMenuOpen: externalMenuOpen,
+  setIsMobileMenuOpen: setExternalMenuOpen,
 }: FileBrowserProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -34,6 +38,9 @@ export default function FileBrowser({
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [internalMenuOpen, setInternalMenuOpen] = useState(false);
+  const isMobileMenuOpen = externalMenuOpen ?? internalMenuOpen;
+  const setIsMobileMenuOpen = setExternalMenuOpen ?? setInternalMenuOpen;
 
   const fetchFolders = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
@@ -179,8 +186,18 @@ export default function FileBrowser({
   }
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)]">
-      <Sidebar 
+    <div className="flex h-[calc(100vh-3.5rem)] relative">
+      {/* Mobile backdrop */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      <Sidebar
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)} 
         folders={folders} 
         currentFolder={currentFolder}
         userId={userId}
@@ -243,8 +260,8 @@ export default function FileBrowser({
         }}
       />
 
-      <main className="flex-1 overflow-auto p-6">
-        <div className="max-w-5xl mx-auto space-y-6">
+      <main className="flex-1 overflow-auto p-4 sm:p-6">
+        <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-semibold text-white">

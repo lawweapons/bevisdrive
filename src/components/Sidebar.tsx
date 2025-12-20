@@ -19,11 +19,13 @@ interface SidebarProps {
   folders: string[];
   currentFolder: string;
   userId: string;
+  isOpen?: boolean;
+  onClose?: () => void;
   onFolderCreated?: (folderName: string, parentFolder?: string) => void;
   onFileDrop?: (fileId: string, targetFolder: string) => void;
 }
 
-export default function Sidebar({ folders, currentFolder, userId, onFolderCreated, onFileDrop }: SidebarProps) {
+export default function Sidebar({ folders, currentFolder, userId, isOpen, onClose, onFolderCreated, onFileDrop }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -251,7 +253,9 @@ export default function Sidebar({ folders, currentFolder, userId, onFolderCreate
   }
 
   return (
-    <aside className="w-56 shrink-0 border-r border-slate-700 bg-slate-800 flex flex-col">
+    <aside className={`w-64 border-r border-slate-700 bg-slate-800 flex flex-col overflow-hidden light-mode:bg-white light-mode:border-slate-200 fixed md:relative inset-y-0 left-0 z-50 md:z-auto transform transition-transform duration-300 ${
+      isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+    }`}>
       <nav className="p-3 space-y-1">
         {navItems.map((item) => (
           <button
