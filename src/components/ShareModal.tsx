@@ -19,6 +19,8 @@ export default function ShareModal() {
   const [password, setPassword] = useState("");
   const [expiresIn, setExpiresIn] = useState("");
   const [shareUrl, setShareUrl] = useState("");
+  const [shareWithEmail, setShareWithEmail] = useState("");
+  const [sharedUsers, setSharedUsers] = useState<string[]>([]);
 
   useEffect(() => {
     if (!fileId) {
@@ -48,6 +50,16 @@ export default function ShareModal() {
           setShare(shareData);
           setEnabled(true);
           setShareUrl(`${window.location.origin}/s/${shareData.link_token}`);
+        }
+
+        // Load shared users
+        const { data: userShares } = await supabase
+          .from("file_user_shares")
+          .select("shared_with_email")
+          .eq("file_id", fileId);
+        
+        if (userShares) {
+          setSharedUsers(userShares.map(s => s.shared_with_email));
         }
       }
 
@@ -128,6 +140,48 @@ export default function ShareModal() {
       navigator.clipboard.writeText(shareUrl);
       alert("Link copied to clipboard!");
     }
+  }
+
+  async function handleAddUser() {
+    if (!file || !shareWithEmail.trim()) return;
+    
+    const email = shareWithEmail.trim().toLowerCase();
+    if (sharedUsers.includes(email)) {
+      alert("Already shared with this user");
+      return;
+    }
+
+    const supabase = createSupabaseBrowserClient();
+    const { error } = await supabase.from("file_user_shares").insert({
+      file_id: file.id,
+      shared_with_email: email,
+    });
+
+    if (error) {
+      alert(`Failed to share: ${error.message}`);
+      return;
+    }
+
+    setSharedUsers([...sharedUsers, email]);
+    setShareWithEmail("");
+  }
+
+  async function handleRemoveUser(email: string) {
+    if (!file) return;
+
+    const supabase = createSupabaseBrowserClient();
+    const { error } = await supabase
+      .from("file_user_shares")
+      .delete()
+      .eq("file_id", file.id)
+      .eq("shared_with_email", email);
+
+    if (error) {
+      alert(`Failed to remove: ${error.message}`);
+      return;
+    }
+
+    setSharedUsers(sharedUsers.filter(u => u !== email));
   }
 
   if (!fileId) return null;
@@ -234,6 +288,49 @@ export default function ShareModal() {
                 )}
               </>
             )}
+
+            <div className="border-t border-slate-700 pt-4 mt-4">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Share with specific users
+              </label>
+              <div className="flex gap-2 mb-3">
+                <input
+                  type="email"
+                  value={shareWithEmail}
+                  onChange={(e) => setShareWithEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddUser()}
+                  placeholder="Enter email address"
+                  className="flex-1 rounded-md border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder-slate-400 outline-none focus:border-blue-500"
+                />
+                <button
+                  onClick={handleAddUser}
+                  className="rounded-md bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-500"
+                >
+                  Add
+                </button>
+              </div>
+              {sharedUsers.length > 0 && (
+                <div className="space-y-1">
+                  {sharedUsers.map((email) => (
+                    <div
+                      key={email}
+                      className="flex items-center justify-between bg-slate-700 rounded px-3 py-2"
+                    >
+                      <span className="text-sm text-white">{email}</span>
+                      <button
+                        onClick={() => handleRemoveUser(email)}
+                        className="text-red-400 hover:text-red-300 text-xs"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {sharedUsers.length === 0 && (
+                <p className="text-xs text-slate-500">Not shared with any specific users yet</p>
+              )}
+            </div>
 
             <div className="flex justify-end gap-2 pt-2">
               <button
