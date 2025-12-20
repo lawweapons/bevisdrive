@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { formatFileSize, formatDateTime, getMimeIcon } from "@/lib/utils";
+import { downloadSelectedFilesAsZip } from "@/lib/downloadFolder";
 import type { FileRecord } from "@/lib/types";
 
 interface FileListProps {
@@ -27,6 +28,7 @@ export default function FileList({ files, folders, onRefresh, viewMode = "list",
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [previewFile, setPreviewFile] = useState<FileRecord | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -352,6 +354,24 @@ export default function FileList({ files, folders, onRefresh, viewMode = "list",
                 <option value="">Root</option>
                 {folders.map(f => <option key={f} value={f}>{f}</option>)}
               </select>
+              <button
+                onClick={async () => {
+                  if (isDownloading) return;
+                  setIsDownloading(true);
+                  try {
+                    const selectedFilesList = files.filter(f => selectedFiles.has(f.id));
+                    await downloadSelectedFilesAsZip(selectedFilesList);
+                  } catch (err) {
+                    alert(err instanceof Error ? err.message : "Download failed");
+                  } finally {
+                    setIsDownloading(false);
+                  }
+                }}
+                disabled={isDownloading}
+                className="rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-500 disabled:opacity-50"
+              >
+                {isDownloading ? "Zipping..." : "Download ZIP"}
+              </button>
               <button
                 onClick={() => setSelectedFiles(new Set())}
                 className="text-xs text-slate-400 hover:text-white"
