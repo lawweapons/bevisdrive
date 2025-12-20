@@ -3,12 +3,21 @@
 import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import StorageQuota from "./StorageQuota";
+import type { FolderRecord } from "@/lib/types";
+
+interface FolderTreeNode {
+  name: string;
+  path: string;
+  children: FolderTreeNode[];
+  color?: string;
+  icon?: string;
+}
 
 interface SidebarProps {
   folders: string[];
   currentFolder: string;
   userId: string;
-  onFolderCreated?: (folderName: string) => void;
+  onFolderCreated?: (folderName: string, parentFolder?: string) => void;
   onFileDrop?: (fileId: string, targetFolder: string) => void;
 }
 
@@ -55,6 +64,102 @@ export default function Sidebar({ folders, currentFolder, userId, onFolderCreate
   ];
 
   const uniqueFolders = Array.from(new Set(folders)).filter(Boolean).sort();
+
+  // Build folder tree from path-based folder names (e.g., "Documents/Work/Reports")
+  function buildFolderTree(folderPaths: string[]): FolderTreeNode[] {
+    const root: FolderTreeNode[] = [];
+    
+    folderPaths.forEach((path) => {
+      const parts = path.split("/");
+      let currentLevel = root;
+      let currentPath = "";
+      
+      parts.forEach((part, index) => {
+        currentPath = index === 0 ? part : `${currentPath}/${part}`;
+        let existing = currentLevel.find((n) => n.name === part);
+        
+        if (!existing) {
+          existing = { name: part, path: currentPath, children: [] };
+          currentLevel.push(existing);
+        }
+        
+        currentLevel = existing.children;
+      });
+    });
+    
+    return root;
+  }
+
+  const folderTree = buildFolderTree(uniqueFolders);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+
+  function toggleExpand(path: string) {
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) {
+        next.delete(path);
+      } else {
+        next.add(path);
+      }
+      return next;
+    });
+  }
+
+  function renderFolderNode(node: FolderTreeNode, depth: number = 0) {
+    const hasChildren = node.children.length > 0;
+    const isExpanded = expandedFolders.has(node.path);
+    const isSelected = currentFolder === node.path;
+    const isDragOver = dragOverFolder === node.path;
+
+    return (
+      <div key={node.path}>
+        <button
+          onClick={() => navigateTo("folder", node.path)}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOverFolder(node.path);
+          }}
+          onDragLeave={() => setDragOverFolder(null)}
+          onDrop={(e) => {
+            e.preventDefault();
+            const fileId = e.dataTransfer.getData("fileId");
+            if (fileId && onFileDrop) {
+              onFileDrop(fileId, node.path);
+            }
+            setDragOverFolder(null);
+          }}
+          className={`w-full flex items-center gap-1 px-2 py-1.5 text-sm rounded-md transition-colors ${
+            isDragOver
+              ? "bg-blue-600 text-white"
+              : isSelected
+              ? "bg-slate-700 text-white font-medium"
+              : "text-slate-400 hover:bg-slate-700/50 hover:text-slate-200"
+          }`}
+          style={{ paddingLeft: `${depth * 12 + 8}px` }}
+        >
+          {hasChildren && (
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleExpand(node.path);
+              }}
+              className="cursor-pointer text-xs w-4"
+            >
+              {isExpanded ? "▼" : "▶"}
+            </span>
+          )}
+          {!hasChildren && <span className="w-4" />}
+          <span>{node.icon || "📂"}</span>
+          <span className="truncate">{node.name}</span>
+        </button>
+        {hasChildren && isExpanded && (
+          <div>
+            {node.children.map((child) => renderFolderNode(child, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <aside className="w-56 shrink-0 border-r border-slate-700 bg-slate-800 flex flex-col">
@@ -126,36 +231,8 @@ export default function Sidebar({ folders, currentFolder, userId, onFolderCreate
           </div>
         )}
 
-        <div className="space-y-1">
-          {uniqueFolders.map((folder) => (
-            <button
-              key={folder}
-              onClick={() => navigateTo("folder", folder)}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragOverFolder(folder);
-              }}
-              onDragLeave={() => setDragOverFolder(null)}
-              onDrop={(e) => {
-                e.preventDefault();
-                const fileId = e.dataTransfer.getData("fileId");
-                if (fileId && onFileDrop) {
-                  onFileDrop(fileId, folder);
-                }
-                setDragOverFolder(null);
-              }}
-              className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors ${
-                dragOverFolder === folder
-                  ? "bg-blue-600 text-white"
-                  : currentFolder === folder
-                  ? "bg-slate-700 text-white font-medium"
-                  : "text-slate-400 hover:bg-slate-700/50 hover:text-slate-200"
-              }`}
-            >
-              <span>📂</span>
-              <span className="truncate">{folder || "Root"}</span>
-            </button>
-          ))}
+        <div className="space-y-0.5">
+          {folderTree.map((node) => renderFolderNode(node))}
           {uniqueFolders.length === 0 && !isCreating && (
             <p className="px-3 py-2 text-xs text-slate-500">No folders yet</p>
           )}
