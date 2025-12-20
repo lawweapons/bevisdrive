@@ -34,6 +34,8 @@ export default function Sidebar({ folders, currentFolder, userId, onFolderCreate
   const [editingFolder, setEditingFolder] = useState<string | null>(null);
   const [sharingFolder, setSharingFolder] = useState<string | null>(null);
   const [folderContextMenu, setFolderContextMenu] = useState<{ path: string; x: number; y: number } | null>(null);
+  const [draggingFolder, setDraggingFolder] = useState<string | null>(null);
+  const [folderOrder, setFolderOrder] = useState<string[]>([]);
   const [folderSettings, setFolderSettings] = useState<Record<string, { icon: string; color: string }>>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("bevisdrive-folder-settings");
@@ -75,7 +77,27 @@ export default function Sidebar({ folders, currentFolder, userId, onFolderCreate
     { id: "trash", label: "Trash", icon: "🗑" },
   ];
 
-  const uniqueFolders = Array.from(new Set(folders)).filter(Boolean).sort();
+  const uniqueFolders = Array.from(new Set(folders)).filter(Boolean);
+  
+  // Load folder order from localStorage
+  useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("bevisdrive-folder-order");
+      if (saved) {
+        setFolderOrder(JSON.parse(saved));
+      }
+    }
+  });
+  
+  // Sort folders by custom order, then alphabetically
+  const sortedFolders = [...uniqueFolders].sort((a, b) => {
+    const aIndex = folderOrder.indexOf(a);
+    const bIndex = folderOrder.indexOf(b);
+    if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+    if (aIndex !== -1) return -1;
+    if (bIndex !== -1) return 1;
+    return a.localeCompare(b);
+  });
 
   // Build folder tree from path-based folder names (e.g., "Documents/Work/Reports")
   function buildFolderTree(folderPaths: string[]): FolderTreeNode[] {
@@ -102,7 +124,25 @@ export default function Sidebar({ folders, currentFolder, userId, onFolderCreate
     return root;
   }
 
-  const folderTree = buildFolderTree(uniqueFolders);
+  const folderTree = buildFolderTree(sortedFolders);
+  
+  function handleFolderDrop(draggedPath: string, targetPath: string) {
+    if (draggedPath === targetPath) return;
+    
+    const newOrder = [...sortedFolders];
+    const draggedIndex = newOrder.indexOf(draggedPath);
+    const targetIndex = newOrder.indexOf(targetPath);
+    
+    if (draggedIndex === -1 || targetIndex === -1) return;
+    
+    // Remove dragged item and insert at target position
+    newOrder.splice(draggedIndex, 1);
+    newOrder.splice(targetIndex, 0, draggedPath);
+    
+    setFolderOrder(newOrder);
+    localStorage.setItem("bevisdrive-folder-order", JSON.stringify(newOrder));
+    setDraggingFolder(null);
+  }
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
   function toggleExpand(path: string) {
@@ -136,6 +176,13 @@ export default function Sidebar({ folders, currentFolder, userId, onFolderCreate
     return (
       <div key={node.path}>
         <button
+          draggable
+          onDragStart={(e) => {
+            e.stopPropagation();
+            setDraggingFolder(node.path);
+            e.dataTransfer.effectAllowed = "move";
+          }}
+          onDragEnd={() => setDraggingFolder(null)}
           onClick={() => navigateTo("folder", node.path)}
           onContextMenu={(e) => {
             e.preventDefault();
@@ -143,19 +190,33 @@ export default function Sidebar({ folders, currentFolder, userId, onFolderCreate
           }}
           onDragOver={(e) => {
             e.preventDefault();
-            setDragOverFolder(node.path);
+            const folderDrag = e.dataTransfer.types.includes("text/plain");
+            if (draggingFolder && draggingFolder !== node.path) {
+              setDragOverFolder(node.path);
+            } else if (!folderDrag) {
+              setDragOverFolder(node.path);
+            }
           }}
           onDragLeave={() => setDragOverFolder(null)}
           onDrop={(e) => {
             e.preventDefault();
             const fileId = e.dataTransfer.getData("fileId");
-            if (fileId && onFileDrop) {
+            
+            if (draggingFolder && draggingFolder !== node.path) {
+              // Reorder folders
+              handleFolderDrop(draggingFolder, node.path);
+            } else if (fileId && onFileDrop) {
+              // Move file to folder
               onFileDrop(fileId, node.path);
             }
             setDragOverFolder(null);
           }}
-          className={`w-full flex items-center gap-1 px-2 py-1.5 text-sm rounded-md transition-colors ${
-            isDragOver
+          className={`w-full flex items-center gap-1 px-2 py-1.5 text-sm rounded-md transition-colors cursor-move ${
+            draggingFolder === node.path
+              ? "opacity-50"
+              : isDragOver && draggingFolder
+              ? "border-t-2 border-t-blue-500"
+              : isDragOver
               ? "bg-blue-600 text-white"
               : isSelected
               ? "bg-slate-700 text-white font-medium"

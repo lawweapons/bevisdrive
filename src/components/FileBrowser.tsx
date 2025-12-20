@@ -71,6 +71,7 @@ export default function FileBrowser({
     }
 
     if (view === "folder" && currentFolder) {
+      console.log("Filtering by folder:", currentFolder);
       query = query.eq("folder", currentFolder);
     } else if (view === "shared") {
       query = query.eq("is_public", true);
@@ -89,6 +90,11 @@ export default function FileBrowser({
     if (error) {
       console.error("Failed to fetch files:", error);
       return;
+    }
+
+    console.log("Fetched files:", data?.length, "files");
+    if (view === "folder" && currentFolder) {
+      console.log("Files in folder:", data?.map(f => ({ name: f.original_name, folder: f.folder })));
     }
 
     if (view === "duplicates") {
@@ -197,6 +203,10 @@ export default function FileBrowser({
           const file = files.find((f) => f.id === fileId);
           if (!file || file.folder === targetFolder) return;
 
+          console.log("Moving file:", file.original_name);
+          console.log("From folder:", file.folder);
+          console.log("To folder:", targetFolder);
+
           const supabase = createSupabaseBrowserClient();
           const oldPath = file.path;
           const fileName = oldPath.split("/").pop()!;
@@ -204,11 +214,15 @@ export default function FileBrowser({
             ? `${userId}/${targetFolder}/${fileName}`
             : `${userId}/${fileName}`;
 
+          console.log("Old path:", oldPath);
+          console.log("New path:", newPath);
+
           const { error: moveError } = await supabase.storage
             .from(file.bucket)
             .move(oldPath, newPath);
 
           if (moveError) {
+            console.error("Storage move error:", moveError);
             alert(`Failed to move file: ${moveError.message}`);
             return;
           }
@@ -219,10 +233,12 @@ export default function FileBrowser({
             .eq("id", fileId);
 
           if (dbError) {
+            console.error("Database update error:", dbError);
             alert(`Failed to update record: ${dbError.message}`);
             return;
           }
 
+          console.log("File moved successfully");
           fetchFiles();
         }}
       />
