@@ -46,8 +46,10 @@ export default function Sidebar({ folders, currentFolder, onFolderCreated, onFil
   const navItems = [
     { id: "all", label: "All files", icon: "📁" },
     { id: "recent", label: "Recent", icon: "🕐" },
+    { id: "starred", label: "Starred", icon: "⭐" },
     { id: "shared", label: "Shared", icon: "🔗" },
     { id: "duplicates", label: "Duplicates", icon: "📋" },
+    { id: "trash", label: "Trash", icon: "🗑" },
   ];
 
   const uniqueFolders = Array.from(new Set(folders)).filter(Boolean).sort();

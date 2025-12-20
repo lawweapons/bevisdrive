@@ -32,6 +32,7 @@ export default function FileBrowser({
   const [folders, setFolders] = useState<string[]>(initialFolders);
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
 
   const fetchFolders = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
@@ -63,6 +64,11 @@ export default function FileBrowser({
       .eq("owner_id", userId)
       .order("created_at", { ascending: false });
 
+    // Filter out trashed files by default (except in trash view)
+    if (view !== "trash") {
+      query = query.or("is_trashed.is.null,is_trashed.eq.false");
+    }
+
     if (view === "folder" && currentFolder) {
       query = query.eq("folder", currentFolder);
     } else if (view === "shared") {
@@ -71,6 +77,10 @@ export default function FileBrowser({
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       query = query.gte("created_at", sevenDaysAgo.toISOString());
+    } else if (view === "starred") {
+      query = query.eq("is_starred", true);
+    } else if (view === "trash") {
+      query = query.eq("is_trashed", true);
     }
 
     const { data, error } = await query;
@@ -167,6 +177,8 @@ export default function FileBrowser({
         folders={folders} 
         currentFolder={currentFolder} 
         onFolderCreated={async (folderName) => {
+          setFolders((prev) => Array.from(new Set([...prev, folderName])).sort());
+          
           const supabase = createSupabaseBrowserClient();
           const { error } = await supabase
             .from("folders")
@@ -174,10 +186,10 @@ export default function FileBrowser({
           
           if (error) {
             console.error("Failed to create folder:", error);
+            alert(`Failed to save folder: ${error.message}`);
+            fetchFolders();
             return;
           }
-          
-          fetchFolders();
         }}
         onFileDrop={async (fileId, targetFolder) => {
           const file = files.find((f) => f.id === fileId);
@@ -220,8 +232,10 @@ export default function FileBrowser({
               <h1 className="text-xl font-semibold text-white">
                 {view === "all" && "All files"}
                 {view === "recent" && "Recent files"}
+                {view === "starred" && "⭐ Starred files"}
                 {view === "shared" && "Shared files"}
                 {view === "duplicates" && "Duplicate files"}
+                {view === "trash" && "🗑 Trash"}
                 {view === "folder" && (currentFolder || "Root")}
               </h1>
               {currentFolder && view === "folder" && (
@@ -250,7 +264,13 @@ export default function FileBrowser({
           </div>
 
           <div className="rounded-xl border border-slate-700 bg-slate-800 p-6">
-            <FileList files={files} folders={folders} onRefresh={fetchFiles} />
+            <FileList 
+              files={files} 
+              folders={folders} 
+              onRefresh={fetchFiles}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+            />
           </div>
         </div>
       </main>
