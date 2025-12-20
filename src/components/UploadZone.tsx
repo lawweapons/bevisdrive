@@ -8,23 +8,27 @@ import type { UploadingFile } from "@/lib/types";
 interface UploadZoneProps {
   userId: string;
   currentFolder: string;
+  folders: string[];
   onUploadComplete: () => void;
 }
 
 export default function UploadZone({
   userId,
   currentFolder,
+  folders,
   onUploadComplete,
 }: UploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [uploads, setUploads] = useState<UploadingFile[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [selectedFolder, setSelectedFolder] = useState(currentFolder);
+  const [showUploadOptions, setShowUploadOptions] = useState(false);
 
-  const handleFiles = useCallback(
-    async (files: FileList | File[]) => {
-      const fileArray = Array.from(files);
-      if (fileArray.length === 0) return;
+  const uploadFiles = useCallback(
+    async (files: File[], targetFolder: string) => {
+      if (files.length === 0) return;
 
-      const newUploads: UploadingFile[] = fileArray.map((file) => ({
+      const newUploads: UploadingFile[] = files.map((file) => ({
         id: crypto.randomUUID(),
         file,
         progress: 0,
@@ -45,7 +49,7 @@ export default function UploadZone({
         try {
           const storagePath = buildStoragePath(
             userId,
-            currentFolder,
+            targetFolder,
             upload.file.name
           );
 
@@ -65,7 +69,7 @@ export default function UploadZone({
             original_name: upload.file.name,
             size: upload.file.size,
             mime_type: upload.file.type || "application/octet-stream",
-            folder: currentFolder,
+            folder: targetFolder,
           });
 
           if (dbError) throw dbError;
@@ -98,8 +102,28 @@ export default function UploadZone({
         setUploads((prev) => prev.filter((u) => u.status !== "done"));
       }, 3000);
     },
-    [userId, currentFolder, onUploadComplete]
+    [userId, onUploadComplete]
   );
+
+  function handleFilesSelected(files: FileList | File[]) {
+    const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
+    
+    setPendingFiles(fileArray);
+    setSelectedFolder(currentFolder);
+    setShowUploadOptions(true);
+  }
+
+  function confirmUpload() {
+    uploadFiles(pendingFiles, selectedFolder);
+    setPendingFiles([]);
+    setShowUploadOptions(false);
+  }
+
+  function cancelUpload() {
+    setPendingFiles([]);
+    setShowUploadOptions(false);
+  }
 
   function onDragOver(e: React.DragEvent) {
     e.preventDefault();
@@ -115,13 +139,13 @@ export default function UploadZone({
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files) {
-      handleFiles(e.dataTransfer.files);
+      handleFilesSelected(e.dataTransfer.files);
     }
   }
 
   function onFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     if (e.target.files) {
-      handleFiles(e.target.files);
+      handleFilesSelected(e.target.files);
       e.target.value = "";
     }
   }
@@ -152,6 +176,60 @@ export default function UploadZone({
           />
         </label>
       </div>
+
+      {showUploadOptions && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-xl bg-slate-800 border border-slate-700 p-6 shadow-xl">
+            <h2 className="text-lg font-semibold text-white mb-4">Upload Options</h2>
+            
+            <div className="mb-4">
+              <p className="text-sm text-slate-300 mb-2">
+                {pendingFiles.length} file{pendingFiles.length !== 1 ? "s" : ""} selected:
+              </p>
+              <div className="max-h-32 overflow-y-auto space-y-1">
+                {pendingFiles.map((file, i) => (
+                  <p key={i} className="text-sm text-slate-400 truncate">
+                    • {file.name}
+                  </p>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Upload to folder
+              </label>
+              <select
+                value={selectedFolder}
+                onChange={(e) => setSelectedFolder(e.target.value)}
+                className="w-full rounded-md border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white"
+              >
+                <option value="">All files (no folder)</option>
+                {folders.map((folder) => (
+                  <option key={folder} value={folder}>
+                    {folder}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={cancelUpload}
+                className="rounded-md border border-slate-600 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmUpload}
+                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
+              >
+                Upload
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {uploads.length > 0 && (
         <div className="space-y-2">

@@ -29,18 +29,30 @@ export default function FileBrowser({
   const currentFolder = searchParams.get("folder") ?? "";
 
   const [files, setFiles] = useState<FileRecord[]>(initialFiles);
-  const [folders, setFolders] = useState<string[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(`bevisdrive-folders-${userId}`);
-      if (saved) {
-        const savedFolders = JSON.parse(saved) as string[];
-        return Array.from(new Set([...initialFolders, ...savedFolders]));
-      }
-    }
-    return initialFolders;
-  });
+  const [folders, setFolders] = useState<string[]>(initialFolders);
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const fetchFolders = useCallback(async () => {
+    const supabase = createSupabaseBrowserClient();
+    const { data, error } = await supabase
+      .from("folders")
+      .select("name")
+      .eq("owner_id", userId)
+      .order("name");
+    
+    if (error) {
+      console.error("Failed to fetch folders:", error);
+      return;
+    }
+    
+    const dbFolders = (data ?? []).map((f) => f.name);
+    setFolders(dbFolders);
+  }, [userId]);
+
+  useEffect(() => {
+    fetchFolders();
+  }, [fetchFolders]);
 
   const fetchFiles = useCallback(async () => {
     const supabase = createSupabaseBrowserClient();
@@ -75,14 +87,6 @@ export default function FileBrowser({
       setFiles(data ?? []);
     }
 
-    const allFolders = (data ?? []).map((f) => f.folder).filter(Boolean);
-    setFolders((prev) => {
-      const merged = Array.from(new Set([...prev, ...initialFolders, ...allFolders]));
-      if (typeof window !== "undefined") {
-        localStorage.setItem(`bevisdrive-folders-${userId}`, JSON.stringify(merged));
-      }
-      return merged;
-    });
   }, [userId, view, currentFolder, initialFolders]);
 
   function findDuplicates(fileList: FileRecord[]): FileRecord[] {
@@ -162,14 +166,18 @@ export default function FileBrowser({
       <Sidebar 
         folders={folders} 
         currentFolder={currentFolder} 
-        onFolderCreated={(folderName) => {
-          setFolders((prev) => {
-            const updated = Array.from(new Set([...prev, folderName]));
-            if (typeof window !== "undefined") {
-              localStorage.setItem(`bevisdrive-folders-${userId}`, JSON.stringify(updated));
-            }
-            return updated;
-          });
+        onFolderCreated={async (folderName) => {
+          const supabase = createSupabaseBrowserClient();
+          const { error } = await supabase
+            .from("folders")
+            .upsert({ owner_id: userId, name: folderName }, { onConflict: "owner_id,name" });
+          
+          if (error) {
+            console.error("Failed to create folder:", error);
+            return;
+          }
+          
+          fetchFolders();
         }}
         onFileDrop={async (fileId, targetFolder) => {
           const file = files.find((f) => f.id === fileId);
@@ -236,6 +244,7 @@ export default function FileBrowser({
             <UploadZone
               userId={userId}
               currentFolder={currentFolder}
+              folders={folders}
               onUploadComplete={fetchFiles}
             />
           </div>
