@@ -4,6 +4,7 @@ import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import StorageQuota from "./StorageQuota";
 import FolderSettingsModal from "./FolderSettingsModal";
+import ShareFolderModal from "./ShareFolderModal";
 import type { FolderRecord } from "@/lib/types";
 
 interface FolderTreeNode {
@@ -31,6 +32,8 @@ export default function Sidebar({ folders, currentFolder, userId, onFolderCreate
   const [newFolderName, setNewFolderName] = useState("");
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
   const [editingFolder, setEditingFolder] = useState<string | null>(null);
+  const [sharingFolder, setSharingFolder] = useState<string | null>(null);
+  const [folderContextMenu, setFolderContextMenu] = useState<{ path: string; x: number; y: number } | null>(null);
   const [folderSettings, setFolderSettings] = useState<Record<string, { icon: string; color: string }>>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("bevisdrive-folder-settings");
@@ -136,7 +139,7 @@ export default function Sidebar({ folders, currentFolder, userId, onFolderCreate
           onClick={() => navigateTo("folder", node.path)}
           onContextMenu={(e) => {
             e.preventDefault();
-            setEditingFolder(node.path);
+            setFolderContextMenu({ path: node.path, x: e.clientX, y: e.clientY });
           }}
           onDragOver={(e) => {
             e.preventDefault();
@@ -265,6 +268,34 @@ export default function Sidebar({ folders, currentFolder, userId, onFolderCreate
       </div>
       <StorageQuota userId={userId} />
 
+      {/* Folder context menu */}
+      {folderContextMenu && (
+        <div
+          className="fixed z-50 bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 min-w-[160px]"
+          style={{ top: folderContextMenu.y, left: folderContextMenu.x }}
+          onClick={() => setFolderContextMenu(null)}
+        >
+          <button
+            onClick={() => {
+              setEditingFolder(folderContextMenu.path);
+              setFolderContextMenu(null);
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700"
+          >
+            <span>🎨</span> Customize
+          </button>
+          <button
+            onClick={() => {
+              setSharingFolder(folderContextMenu.path);
+              setFolderContextMenu(null);
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700"
+          >
+            <span>🔗</span> Share Folder
+          </button>
+        </div>
+      )}
+
       {editingFolder && (
         <FolderSettingsModal
           folderName={editingFolder}
@@ -272,6 +303,14 @@ export default function Sidebar({ folders, currentFolder, userId, onFolderCreate
           currentColor={folderSettings[editingFolder]?.color}
           onSave={(icon, color) => saveFolderSettings(editingFolder, icon, color)}
           onClose={() => setEditingFolder(null)}
+        />
+      )}
+
+      {sharingFolder && (
+        <ShareFolderModal
+          folderName={sharingFolder}
+          userId={userId}
+          onClose={() => setSharingFolder(null)}
         />
       )}
     </aside>
