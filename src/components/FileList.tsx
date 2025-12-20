@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { formatFileSize, formatDateTime, getMimeIcon } from "@/lib/utils";
 import { downloadSelectedFilesAsZip } from "@/lib/downloadFolder";
+import FileVersionHistory from "./FileVersionHistory";
 import type { FileRecord } from "@/lib/types";
 
 interface FileListProps {
@@ -30,6 +31,7 @@ export default function FileList({ files, folders, onRefresh, viewMode = "list",
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [dragOverFileId, setDragOverFileId] = useState<string | null>(null);
+  const [versionHistoryFile, setVersionHistoryFile] = useState<FileRecord | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -662,6 +664,15 @@ export default function FileList({ files, folders, onRefresh, viewMode = "list",
                 >
                   <span>🔗</span> Share
                 </button>
+                <button
+                  onClick={() => {
+                    setVersionHistoryFile(file);
+                    setActiveMenu(null);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-700 flex items-center gap-2"
+                >
+                  <span>🕐</span> Version History
+                </button>
                 <hr className="my-1 border-slate-600" />
                 <button
                   onClick={() => handleMoveToTrash(file)}
@@ -718,6 +729,20 @@ export default function FileList({ files, folders, onRefresh, viewMode = "list",
             </div>
           </div>
         </div>
+      )}
+
+      {/* Version History Modal */}
+      {versionHistoryFile && (
+        <FileVersionHistory
+          fileId={versionHistoryFile.id}
+          fileName={versionHistoryFile.original_name}
+          onClose={() => setVersionHistoryFile(null)}
+          onRestore={async (versionId) => {
+            // Restore version logic would go here
+            alert("Version restore functionality requires backend implementation");
+            setVersionHistoryFile(null);
+          }}
+        />
       )}
     </div>
   );
