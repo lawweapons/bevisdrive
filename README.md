@@ -2,21 +2,40 @@
 
 A secure, Dropbox-style file storage and sharing web app built with Next.js and Supabase.
 
+Live at **https://bevisdrive.com** (hosted on Netlify, deploys automatically from `main`).
+
 ## Features
 
-- **Authentication**: Email/password login (admin-only user creation)
-- **File Management**: Upload, rename, move, delete files
-- **Folder Organization**: Virtual folders with breadcrumb navigation
-- **Drag & Drop Upload**: Multiple file upload with progress indicators
-- **Search**: Full-text search across file names, descriptions, tags, and folders
-- **Sharing**: Password-protected share links with optional expiry dates
-- **Security**: Row-Level Security (RLS) ensures users only access their own files
+- **Sign-in**: Email/password, users are created by an admin (public sign-up is off)
+- **Uploads**: Drag and drop, multi-select, a "Photos & videos" picker for phones, and the screen stays awake during big batches
+- **Files**: Rename, move, delete, trash, starred, preview, version history, and drag to reorder
+- **Folders**: Nested folders with expand/collapse, custom colors and icons, drag to reorder, and zip download
+- **Views**: List or grid, sorting, bulk select, right-click menu, and keyboard shortcuts
+- **Search**: Quick search (Ctrl+K) across names, descriptions, tags and folders
+- **Sharing**: Password-protected links with expiry dates and view counts, folder sharing, and sharing with specific users by email
+- **Extras**: Storage quota, activity log, and a dark/light theme
+- **Phone**: Mobile layout, and it can be installed to your home screen like an app
+- **Security**: Row-Level Security so users only access their own files
 
 ## Tech Stack
 
-- **Frontend**: Next.js 14 (App Router), React, TypeScript, Tailwind CSS
+- **Frontend**: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4
 - **Backend**: Supabase (Auth, Postgres, Storage, RLS)
-- **Deployment**: Vercel + Supabase
+- **Hosting**: Netlify + Supabase
+
+## Getting In
+
+**On a computer:** go to https://bevisdrive.com and sign in with your email and password.
+
+**Forgot your password, or need a new user?** Log in to the Supabase dashboard, then open your BevisDrive project → **Authentication** → **Users**. From there you can send a password reset, or use **Add user** to create a new login.
+
+**On your phone (install it like an app):**
+- **iPhone:** open https://bevisdrive.com in **Safari** → sign in → tap **Share** → **Add to Home Screen**.
+- **Android:** open it in **Chrome** → sign in → tap **⋮** → **Install app** (or **Add to Home screen**).
+
+**Copy photos from your phone:** open BevisDrive → **Photos & videos** → select the photos (on iPhone, drag your finger across thumbnails to select many at once) → pick a folder → **Upload**. Keep the app open until the counter finishes. For other files (PDFs, documents), use **Select files**.
+
+---
 
 ---
 
@@ -45,9 +64,8 @@ Since only admins should create users:
 2. Click **New query**
 3. Copy the entire contents of `supabase/migrations/20251218145900_init.sql` and paste it
 4. Click **Run**
-5. Create another new query
-6. Copy the entire contents of `supabase/migrations/20251218152500_admins.sql` and paste it
-7. Click **Run**
+5. Repeat for each remaining file in `supabase/migrations/`, in this order:
+   `20251218152500_admins.sql`, `20251220_folders.sql`, `20251220_features.sql`
 
 ### Step 4: Get Your API Keys
 
@@ -96,7 +114,9 @@ Since sign-ups are disabled, create a user manually:
 
 ---
 
-## Deploying to Vercel
+## Deploying to Vercel (alternative)
+
+Production currently runs on Netlify (see `SERVERS.md`). These steps are only for hosting on Vercel instead.
 
 ### Step 1: Push to GitHub
 
@@ -136,31 +156,24 @@ After deployment, add your Vercel URL to Supabase:
 bevisdrive/
 ├── src/
 │   ├── app/
-│   │   ├── api/share/download/   # API route for share downloads
+│   │   ├── activity/             # Activity log page
+│   │   ├── api/share/download/   # Signed downloads for share links
 │   │   ├── auth/                 # Login page
 │   │   ├── files/                # Main file browser
 │   │   ├── s/[token]/            # Public share pages
-│   │   ├── layout.tsx
-│   │   └── page.tsx
-│   ├── components/
-│   │   ├── AppHeader.tsx
-│   │   ├── Breadcrumbs.tsx
-│   │   ├── FileBrowser.tsx
-│   │   ├── FileList.tsx
-│   │   ├── LogoutButton.tsx
-│   │   ├── SearchBar.tsx
-│   │   ├── ShareModal.tsx
-│   │   ├── Sidebar.tsx
-│   │   └── UploadZone.tsx
+│   │   ├── manifest.ts           # Home screen app manifest
+│   │   └── layout.tsx
+│   ├── components/               # FileBrowser, FileList, Sidebar, UploadZone, ShareModal,
+│   │                             # ShareFolderModal, FileVersionHistory, FolderSettingsModal,
+│   │                             # QuickSearch, StorageQuota, ThemeToggle, ...
 │   └── lib/
-│       ├── supabase/
-│       │   ├── client.ts         # Browser Supabase client
-│       │   └── server.ts         # Server Supabase client
+│       ├── supabase/             # Browser and server Supabase clients
+│       ├── downloadFolder.ts     # Zip download
 │       ├── types.ts
 │       └── utils.ts
-├── supabase/
-│   └── migrations/               # SQL migrations for Supabase
+├── supabase/migrations/          # SQL migrations (run in order)
 ├── middleware.ts                 # Route protection
+├── CLAUDE.md / MISTAKES.md / SERVERS.md   # Project notes, error log, hosting info
 └── .env.local.example
 ```
 
@@ -185,6 +198,7 @@ bevisdrive/
 - Make sure the email and password match
 
 **Files not uploading**
+- Large videos fail if they exceed Supabase's upload size limit (Supabase dashboard → Storage → Settings)
 - Check browser console for errors
 - Verify the `user-files` bucket was created (check Supabase Dashboard → Storage)
 - Make sure the storage policies were applied (run the migration SQL again if needed)

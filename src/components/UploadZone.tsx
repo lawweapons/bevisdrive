@@ -39,6 +39,14 @@ export default function UploadZone({
 
       const supabase = createSupabaseBrowserClient();
 
+      // Keep phones from sleeping mid-batch, which kills in-flight uploads
+      let wakeLock: WakeLockSentinel | null = null;
+      try {
+        wakeLock = (await navigator.wakeLock?.request("screen")) ?? null;
+      } catch {
+        // Not supported or denied; uploads still work, screen may sleep
+      }
+
       for (const upload of newUploads) {
         setUploads((prev) =>
           prev.map((u) =>
@@ -96,6 +104,7 @@ export default function UploadZone({
         }
       }
 
+      wakeLock?.release().catch(() => {});
       onUploadComplete();
 
       setTimeout(() => {
@@ -150,6 +159,11 @@ export default function UploadZone({
     }
   }
 
+  const activeCount = uploads.filter(
+    (u) => u.status === "pending" || u.status === "uploading"
+  ).length;
+  const finishedCount = uploads.length - activeCount;
+
   return (
     <div className="space-y-4">
       <div
@@ -166,16 +180,35 @@ export default function UploadZone({
         <p className="text-sm text-slate-400 mb-3">
           Drag and drop files here, or
         </p>
-        <label className="inline-block cursor-pointer rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500">
-          Select files
-          <input
-            type="file"
-            multiple
-            onChange={onFileSelect}
-            className="hidden"
-          />
-        </label>
+        <div className="flex flex-wrap justify-center gap-2">
+          <label className="inline-block cursor-pointer rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500">
+            Select files
+            <input
+              type="file"
+              multiple
+              onChange={onFileSelect}
+              className="hidden"
+            />
+          </label>
+          <label className="inline-block cursor-pointer rounded-md border border-blue-500 px-4 py-2 text-sm font-medium text-blue-400 hover:bg-slate-700">
+            Photos &amp; videos
+            <input
+              type="file"
+              multiple
+              accept="image/*,video/*"
+              onChange={onFileSelect}
+              className="hidden"
+            />
+          </label>
+        </div>
       </div>
+
+      {activeCount > 0 && (
+        <p className="text-sm text-slate-300">
+          Uploading {finishedCount + 1} of {uploads.length}… keep this page
+          open until it finishes.
+        </p>
+      )}
 
       {showUploadOptions && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
